@@ -2,9 +2,10 @@ import sys
 import os
 
 # Agregamos la carpeta src al path para que Python encuentre el módulo core
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'src')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
 
 from core.process import Process, ProcessState
+from core.process_generator import ProcessGenerator
 
 def test_processes():
     # Simularemos un proceso con PID 1, que llega en el tick 0.
@@ -55,5 +56,30 @@ def test_processes():
     print(f"Tiempo total en CPU: {p.cpu_time} ticks")
     print(f"Tiempo total en I/O: {p.io_time} ticks")
 
+def test_generator():
+    
+    print("\n" + "="*40)
+    print("PROBANDO GENERADOR DE PROCESOS")
+    print("="*40)
+    
+    generator = ProcessGenerator(
+        num_processes=3,
+        arrival_time_range=(0, 5),
+        cpu_burst_range=(4, 8),
+        io_burst_range=(1, 3),
+        priority_levels=(1, 5)
+    )
+    
+    procesos = generator.generate()
+    
+    for p in procesos:
+        print(f"\nProceso PID: {p.pid}")
+        print(f"  Llegada: {p.arrival_time}")
+        print(f"  Prioridad: {p.priority}")
+        print(f"  Ráfagas: {p.bursts}")
+        print(f"  Total CPU: {p.total_burst_time}")
+        print(f"  Total I/O: {p.total_io_burst_time}")
+
 if __name__ == "__main__":
     test_processes()
+    test_generator()
