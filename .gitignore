@@ -1,0 +1,35 @@
+# --- Python ---
+# Ignorar archivos compilados de Python y cachés
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.cache/
+
+# --- Entornos Virtuales ---
+# Ignorar las carpetas de dependencias locales
+.venv/
+venv/
+env/
+ENV/
+dist/
+build/
+
+# --- Streamlit ---
+# Ignorar configuraciones locales de ejecución y secretos (si llegas a usarlos)
+.streamlit/secrets.toml
+.streamlit/history/
+
+# --- IDEs y Editores de Código ---
+# Ignorar configuraciones de Visual Studio Code o PyCharm que son tuyas y no del proyecto
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- Sistema Operativo ---
+# Archivos del sistema que se crean automáticamente
+.DS_Store
+Thumbs.db
+desktop.ini
