@@ -40,3 +40,22 @@ Para representar fielmente la ejecución de un proceso, se utiliza un **modelo d
     *   *Justificación*: Evita conflictos con paquetes instalados globalmente en el sistema y garantiza que cualquier persona que clone el repositorio pueda reproducir exactamente el mismo entorno de ejecución.
 *   **`requirements.txt`**: Archivo que lista las dependencias externas del proyecto (`streamlit` y `pandas`). Todas las demás librerías utilizadas (`enum`, `random`, `os`, `sys`, `typing`) pertenecen a la biblioteca estándar de Python y no requieren instalación.
     *   *Justificación*: Es el mecanismo estándar en Python para declarar dependencias de forma explícita y reproducible (`pip install -r requirements.txt`).
+
+## 8. Diseño del Planificador (Scheduler)
+*   **Clase Base Abstracta con Herencia**: Se implementa una clase `Scheduler` en `src/core/simulator.py` que contiene toda la maquinaria común de la simulación (colas, reloj, estadísticas). Los algoritmos específicos (FCFS, SJF, Round Robin, etc.) heredan de esta clase y solo implementan el método abstracto `select_next_process()`.
+    *   *Justificación*: Evita la duplicación de código. La lógica de mover procesos entre colas, avanzar el reloj y calcular métricas es idéntica para todos los algoritmos; lo único que cambia es la política de selección. Este patrón (Template Method) permite añadir un nuevo algoritmo en pocas líneas.
+*   **Ciclo de Vida de las Colas**: Los procesos transitan por los estados `NEW → READY → RUNNING → BLOCKED → READY → RUNNING → FINISHED` siguiendo el modelo de ráfagas CPU-E/S-CPU. El `Scheduler` administra cuatro colas (`ready_queue`, `blocked_queue`, `finished_queue`) más una referencia al proceso en CPU (`running_process`).
+*   **Orden de Ejecución del Tick**: Cada tick ejecuta operaciones en un orden estricto: (1) admitir nuevos procesos, (2) avanzar E/S de bloqueados, (3) avanzar CPU del proceso activo, (4) asignar CPU si está libre, (5) acumular espera de la cola de listos, (6) registrar historial, (7) verificar finalización, (8) avanzar reloj.
+    *   *Justificación*: Un orden determinístico garantiza resultados reproducibles y evita condiciones de carrera lógica (ej. que un proceso recién llegado sea seleccionado antes de procesar a los que ya estaban esperando).
+*   **Soporte de Quantum**: El `Scheduler` incluye un atributo `quantum` y un contador `quantum_remaining` para soportar algoritmos expulsivos como Round Robin. Cuando el quantum se agota, el proceso en ejecución es devuelto a la cola de listos.
+*   **Historial de Ticks**: Se registra una instantánea (`snapshot`) del estado del sistema en cada tick, almacenando qué proceso está en CPU, cuáles están en cada cola y cuántos llegaron ese tick. Este historial es la fuente de datos para la visualización paso a paso en la interfaz gráfica.
+*   **Estadísticas**: El método `get_statistics()` calcula todas las métricas requeridas por las especificaciones del proyecto: % de uso del procesador, tiempo promedio de espera, tiempo promedio de bloqueo, tiempo promedio de ejecución (turnaround), total de procesos completados, arribo promedio de nuevos procesos por paso y tiempo total de simulación.
+
+## 9. Algoritmos No Expulsivos
+Todos los algoritmos no expulsivos se implementan en `src/core/algorithms/non_preemptive.py` como subclases de `Scheduler`, implementando únicamente el método `select_next_process()`.
+*   **Convención de Prioridades**: Un número de prioridad **menor** indica **mayor** prioridad (ej. prioridad 1 es más urgente que prioridad 5).
+    *   *Justificación*: Esta es la convención utilizada por la mayoría de sistemas operativos reales (Linux, por ejemplo). Resulta intuitiva al pensar en prioridad como "orden de importancia": el #1 es el primero.
+*   **SJF evalúa la ráfaga actual, no el total**: En SJF se compara `remaining_current_burst` (el tiempo restante de la ráfaga de CPU que el proceso está a punto de ejecutar), no el tiempo total de CPU que le queda al proceso.
+    *   *Justificación*: SJF clásico selecciona basándose en la próxima ráfaga de CPU. Usar el tiempo total restante correspondería más bien a SRTF (Shortest Remaining Time First), que además es expulsivo.
+*   **Criterio de Desempate**: Cuando dos o más procesos tienen el mismo valor de selección (misma ráfaga, misma prioridad), se desempata por `arrival_time` (el que llegó primero tiene preferencia).
+    *   *Justificación*: Garantiza un comportamiento determinístico y justo ante empates, evitando resultados arbitrarios que dificulten el análisis.
