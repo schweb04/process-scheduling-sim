@@ -80,6 +80,7 @@ class Scheduler(ABC):
           1. Admitir procesos nuevos que llegan en este tick.
           2. Avanzar E/S de los procesos bloqueados.
           3. Avanzar CPU del proceso en ejecución.
+          3.5. Verificar si el proceso en CPU debe ser expulsado (hook para expulsivos).
           4. Asignar la CPU si está libre.
           5. Acumular tiempo de espera de los procesos en la cola de listos.
           6. Registrar el estado del tick actual en el historial.
@@ -97,6 +98,9 @@ class Scheduler(ABC):
         
         # 3. Procesar CPU
         self._process_running()
+        
+        # 3.5. Verificar expulsión (hook para algoritmos expulsivos)
+        self._check_preemption()
         
         # 4. Asignar CPU si está libre
         self._assign_cpu()
@@ -199,6 +203,17 @@ class Scheduler(ABC):
                 selected.state = ProcessState.RUNNING
                 self.running_process = selected
                 self.quantum_remaining = self.quantum
+    
+    def _check_preemption(self):
+        """
+        Hook para algoritmos expulsivos.
+        
+        Por defecto no hace nada (comportamiento no expulsivo).
+        Las subclases expulsivas (SRTF, Prioridad Expulsiva) lo sobrescriben
+        para comparar el proceso en CPU contra la cola de listos y decidir
+        si debe ser interrumpido.
+        """
+        pass
     
     def _process_ready_queue(self):
         """Acumula 1 tick de espera en cada proceso que sigue en la cola de listos."""

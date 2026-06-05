@@ -59,3 +59,13 @@ Todos los algoritmos no expulsivos se implementan en `src/core/algorithms/non_pr
     *   *Justificación*: SJF clásico selecciona basándose en la próxima ráfaga de CPU. Usar el tiempo total restante correspondería más bien a SRTF (Shortest Remaining Time First), que además es expulsivo.
 *   **Criterio de Desempate**: Cuando dos o más procesos tienen el mismo valor de selección (misma ráfaga, misma prioridad), se desempata por `arrival_time` (el que llegó primero tiene preferencia).
     *   *Justificación*: Garantiza un comportamiento determinístico y justo ante empates, evitando resultados arbitrarios que dificulten el análisis.
+
+## 10. Algoritmos Expulsivos
+Todos los algoritmos expulsivos se implementan en `src/core/algorithms/preemptive.py` como subclases de `Scheduler`.
+*   **Hook de Expulsión (`_check_preemption()`)**: Se añadió un método hook al ciclo del `tick()` del Scheduler base (paso 3.5) que por defecto no hace nada. Los algoritmos expulsivos lo sobrescriben para comparar el proceso en CPU contra la cola de listos y decidir si debe ser interrumpido.
+    *   *Justificación*: Este patrón permite que los algoritmos no expulsivos existentes sigan funcionando sin modificación alguna, mientras que los expulsivos añaden su lógica de interrupción de forma limpia.
+*   **Dos tipos de expulsión**: Round Robin usa expulsión por quantum (ya integrada en el Scheduler base). SRTF y Prioridad Expulsiva usan expulsión por comparación (sobrescribiendo `_check_preemption()`).
+*   **Relación entre pares de algoritmos**:
+    *   SJF ↔ SRTF: Mismo criterio (`remaining_current_burst`), pero SRTF puede interrumpir.
+    *   Prioridad NP ↔ Prioridad Expulsiva: Mismo criterio (`priority`), pero la versión expulsiva puede interrumpir.
+    *   FCFS ↔ Round Robin: Mismo orden (FIFO), pero Round Robin limita el tiempo con un quantum.
