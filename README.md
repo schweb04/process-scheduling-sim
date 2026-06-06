@@ -75,14 +75,21 @@ process-scheduling-sim/
 │   └── config.toml          # Tema visual de la aplicación
 ├── docs/
 │   ├── specs.md              # Especificaciones del proyecto
-│   └── technical_decisions.md # Decisiones técnicas y de diseño
+│   └── technical_decisions.md # Documentación detallada del proyecto (arquitectura y algoritmos)
 ├── src/
 │   ├── core/
+│   │   ├── algorithms/
+│   │   │   ├── non_preemptive.py # Algoritmos no expulsivos
+│   │   │   └── preemptive.py     # Algoritmos expulsivos
 │   │   ├── process.py        # Clase Process y estados
-│   │   └── process_generator.py # Generador aleatorio de procesos
+│   │   ├── process_generator.py # Generador aleatorio de procesos
+│   │   └── simulator.py      # Clase base Scheduler y ciclo
 │   └── app.py                # Punto de entrada (Streamlit)
 ├── tests/
-│   └── test_processes.py     # Pruebas de la lógica de procesos
+│   ├── test_non_preemptive.py# Pruebas para algoritmos no expulsivos
+│   ├── test_preemptive.py    # Pruebas para algoritmos expulsivos
+│   ├── test_processes.py     # Pruebas del modelo Process y el generador
+│   └── test_scheduler.py     # Pruebas del ciclo de vida del planificador
 ├── .gitignore
 ├── requirements.txt
 └── README.md
@@ -90,4 +97,4 @@ process-scheduling-sim/
 
 ## Documentación
 
-Las decisiones arquitectónicas y técnicas del proyecto están detalladas en [`docs/technical_decisions.md`](docs/technical_decisions.md).
+La documentación del proyecto, que abarca la arquitectura, decisiones técnicas de diseño y los algoritmos implementados, se encuentra detallada en [`docs/technical_decisions.md`](docs/technical_decisions.md).

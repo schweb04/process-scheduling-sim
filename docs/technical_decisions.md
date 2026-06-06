@@ -1,84 +1,104 @@
-# Decisiones Técnicas y de Diseño
+# Documentación Técnica y de Diseño
 
-Este documento sirve como registro central de las decisiones arquitectónicas y tecnológicas tomadas durante el desarrollo del Simulador de Planificación de Procesos.
+Este documento describe la arquitectura, el modelado y las decisiones técnicas tomadas durante el desarrollo del **Simulador de Planificación de Procesos**. Su propósito es servir como el informe detallado del proyecto, explicando *cómo* se construyó el simulador y *por qué* se tomaron ciertas decisiones de diseño.
 
-## 1. Lenguaje y Entorno de Desarrollo
-*   **Lenguaje**: Python.
-    *   *Justificación*: Python es un lenguaje altamente versátil con una sintaxis limpia y expresiva que facilita la implementación de lógica de simulación compleja (como el manejo de múltiples colas de estado y tiempos de los algoritmos).
-*   **Entorno**: WSL (Windows Subsystem for Linux).
-    *   *Justificación*: Permite un entorno nativo de Linux dentro de Windows, lo cual se alinea muy bien con los conceptos de sistemas operativos, y evita problemas de compatibilidad con librerías o scripts al ejecutar simulaciones.
+---
 
-## 2. Interfaz Gráfica (GUI)
-*   **Biblioteca**: Streamlit.
-    *   *Justificación*: Streamlit permite desarrollar interfaces web interactivas (dashboards) usando puramente Python. Esto es ideal para un simulador donde necesitaremos actualizar el estado visual en "tiempo real" (o paso a paso) y mostrar métricas. Facilita la creación de paneles laterales para la configuración de la simulación y gráficas en la vista principal para resultados.
+## 1. Arquitectura General y Tecnologías
 
-## 3. Arquitectura del Proyecto
-Se ha optado por separar claramente la lógica del negocio de la interfaz de usuario:
-*   **`src/core/`**: Contendrá toda la lógica interna del simulador: procesos (`process.py`), los distintos algoritmos de planificación (`schedulers/`) y las métricas. Estas clases no tendrán dependencia alguna con la interfaz.
-*   **`src/gui/`**: Se encargará de consumir los objetos y resultados de `core` para representarlos visualmente a través de Streamlit.
+El proyecto fue construido en **Python** debido a su sintaxis limpia y su capacidad para modelar simulaciones lógicas de forma orientada a objetos de manera muy legible.
 
-## 4. Modelado del Proceso
-Para representar fielmente la ejecución de un proceso, se utiliza un **modelo de ráfagas CPU-E/S-CPU**.
-*   *Justificación*: Un proceso no suele consumir CPU de principio a fin sin interrupciones. Frecuentemente necesita operaciones de E/S (lectura de disco, entrada del usuario). Modelar los requerimientos de un proceso como una secuencia alternada de tiempos de CPU y de E/S (ej. `[Ráfaga_CPU, Ráfaga_IO, Ráfaga_CPU]`) permite evaluar los algoritmos (especialmente los expulsivos y SRTF) de forma más realista, evidenciando cómo el tiempo de espera por E/S afecta el rendimiento del procesador y las colas.
+Para asegurar un código escalable y fácil de mantener, se adoptó una arquitectura que **desacopla completamente la lógica de negocio de la interfaz gráfica**:
 
-## 5. Generación Aleatoria de Procesos
-*   **Módulo Independiente**: Se aislará la lógica de creación aleatoria en `src/core/process_generator.py`.
-    *   *Justificación*: Mantener la clase `Process` pura (sin depender de bibliotecas como `random`). Esto permite construir escenarios tanto aleatorios como predefinidos fácilmente para pruebas.
-*   **Distribución de Ráfagas**: Se generará primero un total de tiempo CPU y un total de tiempo E/S por cada proceso. Luego, el tiempo CPU se dividirá intentando mantener equidad antes y después de la(s) ráfaga(s) de E/S (creando la estructura `[CPU, IO, CPU]`).
-    *   *Justificación*: Asegura que los procesos sigan el ciclo natural de ejecución en sistemas operativos, donde siempre inician haciendo uso de CPU para luego hacer peticiones de E/S, y al volver requieren otra pequeña o gran fracción de CPU antes de finalizar.
+*   **`src/core/` (Lógica Pura)**: Contiene todas las reglas matemáticas y estructurales de la simulación. El `Scheduler`, los `Process` y los algoritmos no saben nada de cómo se van a mostrar en pantalla.
+*   **`src/app.py` (Interfaz Gráfica)**: Actúa como el controlador visual utilizando la biblioteca **Streamlit**. Consume los objetos de `core/` y los renderiza de forma interactiva.
 
-## 6. Diseño de la Interfaz Gráfica (Streamlit)
-*   **Separación de Lógica Visual**: El archivo `src/app.py` será el único punto de entrada de la aplicación y coordinará la interfaz.
-    *   *Justificación*: Mantiene el desacoplamiento de la lógica (`core`) de su presentación.
-*   **Panel Lateral (Sidebar) para Configuración**: Se utilizará el panel lateral de Streamlit (`st.sidebar`) exclusivamente para los controles y parámetros de entrada (número de procesos, rangos de ráfagas, etc.).
-    *   *Justificación*: Permite al usuario mantener siempre visibles los controles sin invadir el espacio principal donde se renderizará el estado de la simulación.
-*   **Estética Premium y Tema Global**: La configuración visual de la aplicación se centralizará en `.streamlit/config.toml` usando un tema oscuro con color de acento Verde.
-    *   *Justificación*: Ofrece una experiencia moderna y fluida. Tener la configuración en un archivo `toml` permite cambiar el color de acento o el tema completo (ej. cambiar de Verde a Azul o de Oscuro a Claro) fácilmente modificando una sola línea, sin alterar el código fuente.
+**¿Por qué Streamlit?**
+Streamlit fue elegido por su capacidad de construir dashboards web modernos y reactivos exclusivamente con Python, lo cual es ideal para un simulador que requiere paneles de control dinámicos, visualización de estados en tiempo real y tablas de métricas.
 
-## 7. Gestión de Dependencias
-*   **Entorno Virtual (`venv`)**: Se utiliza el módulo estándar `python3 -m venv` para crear un entorno aislado (`.venv/`) donde se instalan las dependencias del proyecto.
-    *   *Justificación*: Evita conflictos con paquetes instalados globalmente en el sistema y garantiza que cualquier persona que clone el repositorio pueda reproducir exactamente el mismo entorno de ejecución.
-*   **`requirements.txt`**: Archivo que lista las dependencias externas del proyecto (`streamlit` y `pandas`). Todas las demás librerías utilizadas (`enum`, `random`, `os`, `sys`, `typing`) pertenecen a la biblioteca estándar de Python y no requieren instalación.
-    *   *Justificación*: Es el mecanismo estándar en Python para declarar dependencias de forma explícita y reproducible (`pip install -r requirements.txt`).
+---
 
-## 8. Diseño del Planificador (Scheduler)
-*   **Clase Base Abstracta con Herencia**: Se implementa una clase `Scheduler` en `src/core/simulator.py` que contiene toda la maquinaria común de la simulación (colas, reloj, estadísticas). Los algoritmos específicos (FCFS, SJF, Round Robin, etc.) heredan de esta clase y solo implementan el método abstracto `select_next_process()`.
-    *   *Justificación*: Evita la duplicación de código. La lógica de mover procesos entre colas, avanzar el reloj y calcular métricas es idéntica para todos los algoritmos; lo único que cambia es la política de selección. Este patrón (Template Method) permite añadir un nuevo algoritmo en pocas líneas.
-*   **Ciclo de Vida de las Colas**: Los procesos transitan por los estados `NEW → READY → RUNNING → BLOCKED → READY → RUNNING → FINISHED` siguiendo el modelo de ráfagas CPU-E/S-CPU. El `Scheduler` administra cuatro colas (`ready_queue`, `blocked_queue`, `finished_queue`) más una referencia al proceso en CPU (`running_process`).
-*   **Orden de Ejecución del Tick**: Cada tick ejecuta operaciones en un orden estricto: (1) admitir nuevos procesos, (2) avanzar E/S de bloqueados, (3) avanzar CPU del proceso activo, (4) asignar CPU si está libre, (5) acumular espera de la cola de listos, (6) registrar historial, (7) verificar finalización, (8) avanzar reloj.
-    *   *Justificación*: Un orden determinístico garantiza resultados reproducibles y evita condiciones de carrera lógica (ej. que un proceso recién llegado sea seleccionado antes de procesar a los que ya estaban esperando).
-*   **Soporte de Quantum**: El `Scheduler` incluye un atributo `quantum` y un contador `quantum_remaining` para soportar algoritmos expulsivos como Round Robin. Cuando el quantum se agota, el proceso en ejecución es devuelto a la cola de listos.
-*   **Historial de Ticks**: Se registra una instantánea (`snapshot`) del estado del sistema en cada tick, almacenando qué proceso está en CPU, cuáles están en cada cola y cuántos llegaron ese tick. Este historial es la fuente de datos para la visualización paso a paso en la interfaz gráfica.
-*   **Estadísticas**: El método `get_statistics()` calcula todas las métricas requeridas por las especificaciones del proyecto: % de uso del procesador, tiempo promedio de espera, tiempo promedio de bloqueo, tiempo promedio de ejecución (turnaround), total de procesos completados, arribo promedio de nuevos procesos por paso y tiempo total de simulación.
+## 2. Modelado de Procesos (Modelo CPU-E/S-CPU)
 
-## 9. Algoritmos No Expulsivos
-Todos los algoritmos no expulsivos se implementan en `src/core/algorithms/non_preemptive.py` como subclases de `Scheduler`, implementando únicamente el método `select_next_process()`.
-*   **Convención de Prioridades**: Un número de prioridad **menor** indica **mayor** prioridad (ej. prioridad 1 es más urgente que prioridad 5).
-    *   *Justificación*: Esta es la convención utilizada por la mayoría de sistemas operativos reales (Linux, por ejemplo). Resulta intuitiva al pensar en prioridad como "orden de importancia": el #1 es el primero.
-*   **SJF evalúa la ráfaga actual, no el total**: En SJF se compara `remaining_current_burst` (el tiempo restante de la ráfaga de CPU que el proceso está a punto de ejecutar), no el tiempo total de CPU que le queda al proceso.
-    *   *Justificación*: SJF clásico selecciona basándose en la próxima ráfaga de CPU. Usar el tiempo total restante correspondería más bien a SRTF (Shortest Remaining Time First), que además es expulsivo.
-*   **Criterio de Desempate**: Cuando dos o más procesos tienen el mismo valor de selección (misma ráfaga, misma prioridad), se desempata por `arrival_time` (el que llegó primero tiene preferencia).
-    *   *Justificación*: Garantiza un comportamiento determinístico y justo ante empates, evitando resultados arbitrarios que dificulten el análisis.
+En lugar de tratar a los procesos como bloques monolíticos de tiempo, el simulador utiliza un modelo realista basado en ráfagas (bursts) alternadas. 
 
-## 10. Algoritmos Expulsivos
-Todos los algoritmos expulsivos se implementan en `src/core/algorithms/preemptive.py` como subclases de `Scheduler`.
-*   **Hook de Expulsión (`_check_preemption()`)**: Se añadió un método hook al ciclo del `tick()` del Scheduler base (paso 3.5) que por defecto no hace nada. Los algoritmos expulsivos lo sobrescriben para comparar el proceso en CPU contra la cola de listos y decidir si debe ser interrumpido.
-    *   *Justificación*: Este patrón permite que los algoritmos no expulsivos existentes sigan funcionando sin modificación alguna, mientras que los expulsivos añaden su lógica de interrupción de forma limpia.
-*   **Dos tipos de expulsión**: Round Robin usa expulsión por quantum (ya integrada en el Scheduler base). SRTF y Prioridad Expulsiva usan expulsión por comparación (sobrescribiendo `_check_preemption()`).
-*   **Relación entre pares de algoritmos**:
-    *   SJF ↔ SRTF: Mismo criterio (`remaining_current_burst`), pero SRTF puede interrumpir.
-    *   Prioridad NP ↔ Prioridad Expulsiva: Mismo criterio (`priority`), pero la versión expulsiva puede interrumpir.
-    *   FCFS ↔ Round Robin: Mismo orden (FIFO), pero Round Robin limita el tiempo con un quantum.
+Cada proceso se representa internamente con una lista de enteros `bursts = [CPU, E/S, CPU, ...]`.
+*   *Justificación*: En un sistema operativo real, un proceso rara vez usa el procesador ininterrumpidamente. Constantemente solicita acceso a memoria secundaria o dispositivos, entrando en estado bloqueado. Modelar esto permite evaluar verdaderamente la eficiencia de la CPU frente a cuellos de botella de Entrada/Salida, y pone a prueba cómo los algoritmos reaccionan cuando un proceso se bloquea y libera la CPU voluntariamente.
 
-## 11. Integración GUI-Simulación
-*   **Flujo de 3 pasos**: La interfaz guía al usuario a través de: (1) Generar procesos, (2) Configurar algoritmo, (3) Ejecutar simulación. Cada paso tiene su propia sección expandible en el panel lateral.
-    *   *Justificación*: Un flujo secuencial y claro reduce la confusión del usuario y asegura que no se salte pasos (ej. intentar simular sin procesos generados).
-*   **`st.session_state` para persistencia**: Streamlit re-renderiza toda la página en cada interacción. Usamos `st.session_state` para almacenar los procesos generados, el Scheduler activo y su estado actual entre re-renders.
-    *   *Justificación*: Sin `session_state`, los datos se perderían en cada clic de botón. Este mecanismo es el estándar de Streamlit para manejar estado.
-*   **`copy.deepcopy` para reinicio**: Al generar procesos, se guarda una copia profunda de los objetos originales (`procesos_backup`). Al reiniciar la simulación, se crean nuevas instancias del Scheduler a partir de esa copia.
-    *   *Justificación*: Los objetos `Process` son mutados durante la simulación (`tick_cpu()`, `tick_io()`, etc.). Sin copias profundas, reiniciar no restauraría el estado original de los procesos.
-*   **Tres modos de ejecución**:
-    *   *Ejecutar Todo*: Llama a `run_all()` y muestra el resultado final.
-    *   *Siguiente Tick*: Llama a `tick()` una sola vez, permitiendo inspeccionar cada paso.
-    *   *Modo Automático*: Ejecuta ticks en un bucle con `time.sleep()` y actualiza la visualización usando `st.empty()` como contenedor dinámico.
-*   **Catálogo de algoritmos (`ALGORITHMS`)**: Diccionario interno que mapea cada nombre de algoritmo a su clase, si necesita quantum, si es expulsivo y una descripción breve. Permite escalar fácilmente la lista de algoritmos sin modificar la lógica de la interfaz.
+**Estados del Proceso**:
+El ciclo de vida se controla mediante la enumeración `ProcessState`: `NEW → READY → RUNNING → BLOCKED → FINISHED`.
+
+---
+
+## 3. El Motor del Simulador: La clase `Scheduler`
+
+El núcleo del proyecto radica en la clase abstracta `Scheduler` (`src/core/simulator.py`). Esta clase base maneja toda la fontanería de la simulación:
+1.  **Las Colas**: Administra las listas físicas de procesos (`ready_queue`, `blocked_queue`, `finished_queue`).
+2.  **El Reloj Global (`current_tick`)**: Controla el tiempo del sistema.
+3.  **El Recolector de Estadísticas**: Suma los tiempos de espera, uso de CPU y turnaround.
+
+### El Ciclo Estricto del Tick
+Para garantizar que la simulación sea determinista (siempre produce el mismo resultado ante los mismos procesos), el método `tick()` ejecuta las operaciones en un orden estricto inalterable:
+1.  **Admitir**: Mover procesos con `arrival_time == current_tick` a Listos.
+2.  **E/S**: Avanzar la ráfaga de los procesos Bloqueados. Si terminan, regresan a Listos.
+3.  **CPU**: Avanzar la ráfaga del proceso en Ejecución.
+4.  **Evaluar Expulsión**: (Paso hook para algoritmos expulsivos).
+5.  **Asignar**: Si la CPU quedó o está libre, elegir el siguiente proceso.
+6.  **Esperar**: Incrementar el contador de espera a los procesos que se quedaron en Listos.
+
+*Justificación*: Este patrón (Template Method) permite que los distintos algoritmos de planificación solo tengan que heredar de `Scheduler` e implementar un solo método: `select_next_process()`.
+
+---
+
+## 4. Algoritmos de Planificación Implementados
+
+El simulador implementa 7 políticas de planificación, divididas en no expulsivas y expulsivas.
+
+### Algoritmos No Expulsivos
+*(Una vez que toman la CPU, no la sueltan hasta que terminan su ráfaga actual o solicitan E/S).*
+
+1.  **FCFS (First-Come, First-Served)**: Implementación FIFO basada en sacar siempre el índice `0` de la `ready_queue`.
+2.  **SJF (Shortest Job First)**: Ordena la cola de listos buscando el menor `remaining_current_burst`.
+    *   *Nota de diseño*: Evalúa la longitud de la *ráfaga actual*, no el tiempo total restante del proceso, emulando el comportamiento estándar de SJF predictivo.
+3.  **Random (Aleatorio)**: Selecciona un índice al azar de la cola de listos usando la librería estándar `random`.
+4.  **Priority NP (Prioridad)**: Ordena la cola buscando el número de prioridad más bajo.
+    *   *Convención*: El número menor representa la prioridad más alta (ej. 1 es más importante que 5), alineándose con estándares como Linux.
+
+### Algoritmos Expulsivos
+*(Pueden interrumpir al proceso en ejecución si las condiciones lo ameritan).*
+
+Se implementó un método hook `_check_preemption()` en el ciclo base que es sobrescrito por estos algoritmos:
+
+5.  **Round Robin**: Cada proceso recibe un límite de tiempo (quantum). La lógica de expiración de quantum se integró directamente en el Scheduler base.
+6.  **SRTF (Shortest Remaining Time First)**: Compara el tiempo restante del proceso en CPU contra el de la cola de listos. Si llega uno más corto (o igual de corto, pero que llegó antes), expulsa al actual.
+7.  **Priority Preemptive (Prioridad Expulsiva)**: Similar a SRTF, pero expulsa si llega un proceso con mejor prioridad (o misma prioridad, pero menor `arrival_time`).
+
+### Criterio General de Desempate
+En todos los algoritmos, si el atributo de selección principal empata (ej. dos procesos con prioridad 2, o dos procesos con 3 ticks restantes), se utiliza el **`arrival_time` como segundo criterio de ordenamiento**. El proceso que entró al sistema primero tiene la preferencia, garantizando justicia y evitando inanición arbitraria.
+
+---
+
+## 5. Diseño de la Experiencia de Usuario (Streamlit)
+
+La interfaz gráfica se diseñó bajo una filosofía de **flujo secuencial de 3 pasos**, utilizando el panel lateral para mantener limpio el panel principal:
+
+1.  **Generación de Procesos**: El usuario define los rangos matemáticos (Llegada, CPU, E/S, Prioridad) de forma parametrizada. 
+2.  **Selección de Algoritmo**: Un catálogo claro explica el funcionamiento y la naturaleza (expulsiva/no expulsiva) de cada algoritmo.
+3.  **Controles de Simulación**: Múltiples formas de observar el comportamiento:
+    *   **Paso a paso**: Útil con fines educativos para auditar decisiones en ticks conflictivos.
+    *   **Automático**: Para visualizar dinámicamente cómo las colas se vacían y llenan a una velocidad controlable por el usuario.
+    *   **Ejecutar todo**: Para simular directamente y ver las estadísticas finales de rendimiento (turnaround, espera, etc.).
+
+**Manejo de Estado (`st.session_state`)**
+Para lograr que la interfaz permitiera pausar, dar pasos, y reiniciar la simulación usando los mismos procesos exactos generados, se utilizó copias profundas (`copy.deepcopy()`) de los objetos originales en la memoria de la sesión de Streamlit. Esto evita que las mutaciones inherentes a la simulación corrompan los datos para una segunda pasada.
+
+---
+
+## 6. Pruebas y Aseguramiento de Calidad
+
+Para garantizar que la lógica central fuera robusta antes de acoplarla a la interfaz gráfica, se desarrollaron scripts de pruebas (`tests/test_non_preemptive.py` y `tests/test_preemptive.py`).
+Estos tests inyectan procesos duros (hardcoded) diseñados específicamente para forzar casos límite, como:
+*   Empates de prioridades simultáneas.
+*   Llegadas de procesos cortos interrumpiendo procesos largos justo en el medio de una ráfaga de CPU.
+
+El uso de un reloj centralizado y colas estrictas permitió que estas pruebas de consola predijeran el mismo historial tick a tick que finalmente se muestra en la web.

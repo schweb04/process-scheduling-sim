@@ -59,11 +59,11 @@ class SRTFScheduler(Scheduler):
             key=lambda p: (p.remaining_current_burst, p.arrival_time)
         )
         
-        running_remaining = self.running_process.remaining_current_burst
-        ready_remaining = shortest_ready.remaining_current_burst
+        running_metric = (self.running_process.remaining_current_burst, self.running_process.arrival_time)
+        ready_metric = (shortest_ready.remaining_current_burst, shortest_ready.arrival_time)
         
-        # Expulsar si el de la cola tiene estrictamente menos tiempo restante
-        if ready_remaining < running_remaining:
+        # Expulsar si el de la cola tiene menor tiempo restante, o igual tiempo pero llegó antes
+        if ready_metric < running_metric:
             self.running_process.state = ProcessState.READY
             self.ready_queue.append(self.running_process)
             self.running_process = None
@@ -103,8 +103,11 @@ class PriorityPScheduler(Scheduler):
             key=lambda p: (p.priority, p.arrival_time)
         )
         
-        # Expulsar si el de la cola tiene estrictamente mayor prioridad
-        if highest_priority_ready.priority < self.running_process.priority:
+        running_metric = (self.running_process.priority, self.running_process.arrival_time)
+        ready_metric = (highest_priority_ready.priority, highest_priority_ready.arrival_time)
+        
+        # Expulsar si el de la cola tiene mayor prioridad, o igual prioridad pero llegó antes
+        if ready_metric < running_metric:
             self.running_process.state = ProcessState.READY
             self.ready_queue.append(self.running_process)
             self.running_process = None

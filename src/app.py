@@ -133,11 +133,26 @@ def render_sidebar():
             "Cada proceso tendrá un tiempo de llegada, ráfagas de CPU y E/S, "
             "y una prioridad dentro de estos rangos."
         )
-        num_processes = st.slider("Cantidad de Procesos", 1, 20, 5)
-        min_arr, max_arr = st.slider("Rango de Llegada (Ticks)", 0, 50, (0, 10))
-        min_cpu, max_cpu = st.slider("Rango de CPU (Ticks)", 1, 20, (2, 8))
-        min_io, max_io = st.slider("Rango de E/S (Ticks)", 0, 10, (1, 3))
-        min_prio, max_prio = st.slider("Rango de Prioridad", 1, 10, (1, 5))
+        num_processes = st.slider(
+            "Cantidad de Procesos", 1, 20, 5,
+            help="Número total de procesos que se simularán."
+        )
+        min_arr, max_arr = st.slider(
+            "Rango de Llegada (Ticks)", 0, 50, (0, 10),
+            help="El tiempo en el que un proceso entra al sistema. 0 significa que está disponible desde el inicio."
+        )
+        min_cpu, max_cpu = st.slider(
+            "Rango de CPU (Ticks)", 1, 20, (2, 8),
+            help="Tiempo total de procesamiento requerido por el proceso en la CPU, el cual se dividirá en múltiples ráfagas."
+        )
+        min_io, max_io = st.slider(
+            "Rango de E/S (Ticks)", 0, 10, (1, 3),
+            help="Tiempo total que el proceso pasará bloqueado realizando operaciones de Entrada/Salida."
+        )
+        min_prio, max_prio = st.slider(
+            "Rango de Prioridad", 1, 10, (1, 5),
+            help="Nivel de urgencia del proceso. Los valores más bajos indican mayor prioridad (ej. 1 es más urgente que 5)."
+        )
         
         generate_btn = st.button(
             "🎲 Generar Procesos",
@@ -254,6 +269,10 @@ def render_simulation_state(scheduler):
     """Muestra el estado actual de las colas y la CPU."""
     st.subheader(f"🕐 Tick Actual: {scheduler.current_tick}")
     
+    if scheduler.is_complete:
+        render_history(scheduler)
+        st.write("") # Espacio en blanco adicional
+        
     col_ready, col_cpu, col_blocked, col_finished = st.columns(4)
     
     with col_ready:
@@ -408,9 +427,6 @@ def main():
     
     # ── Mostrar estado actual ──
     render_simulation_state(scheduler)
-    
-    # ── Historial ──
-    render_history(scheduler)
     
     # ── Estadísticas finales ──
     render_statistics(scheduler)
