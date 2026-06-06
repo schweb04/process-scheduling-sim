@@ -25,10 +25,6 @@ class SJFScheduler(Scheduler):
     Selecciona el proceso cuya ráfaga de CPU actual (remaining_current_burst)
     sea la más corta. En caso de empate, se desempata por orden de llegada
     (arrival_time).
-    
-    Nota: Se evalúa la ráfaga de CPU actual, no el tiempo total restante
-    del proceso. Evaluar el tiempo total restante correspondería a SRTF
-    (que además es expulsivo).
     """
     
     def select_next_process(self) -> Optional[Process]:
@@ -63,7 +59,7 @@ class PriorityNPScheduler(Scheduler):
     
     Selecciona el proceso con el menor número de prioridad
     (menor número = mayor prioridad, convención estándar de SO).
-    En caso de empate, se desempata por orden de llegada (arrival_time).
+    En caso de empate, se desempata por orden de llegada.
     """
     
     def select_next_process(self) -> Optional[Process]:

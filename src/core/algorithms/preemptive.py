@@ -33,7 +33,8 @@ class SRTFScheduler(Scheduler):
     
     Usa el mismo criterio que SJF (remaining_current_burst), pero
     al ser expulsivo, evalúa en cada tick si debe interrumpir.
-    Desempate por arrival_time.
+    
+    Desempate por orden de llegada (arrival_time).
     """
     
     def select_next_process(self) -> Optional[Process]:
@@ -53,7 +54,6 @@ class SRTFScheduler(Scheduler):
         if self.running_process is None or not self.ready_queue:
             return
         
-        # Encontrar el menor remaining_current_burst en la cola de listos
         shortest_ready = min(
             self.ready_queue,
             key=lambda p: (p.remaining_current_burst, p.arrival_time)
@@ -62,7 +62,6 @@ class SRTFScheduler(Scheduler):
         running_metric = (self.running_process.remaining_current_burst, self.running_process.arrival_time)
         ready_metric = (shortest_ready.remaining_current_burst, shortest_ready.arrival_time)
         
-        # Expulsar si el de la cola tiene menor tiempo restante, o igual tiempo pero llegó antes
         if ready_metric < running_metric:
             self.running_process.state = ProcessState.READY
             self.ready_queue.append(self.running_process)
@@ -77,7 +76,7 @@ class PriorityPScheduler(Scheduler):
     número de prioridad (menor = más urgente). Si llega un proceso con
     mayor prioridad que el que está en CPU, lo interrumpe.
     
-    Desempate por arrival_time.
+    Desempate por orden de llegada.
     """
     
     def select_next_process(self) -> Optional[Process]:
@@ -97,7 +96,6 @@ class PriorityPScheduler(Scheduler):
         if self.running_process is None or not self.ready_queue:
             return
         
-        # Encontrar la mayor prioridad (menor número) en la cola de listos
         highest_priority_ready = min(
             self.ready_queue,
             key=lambda p: (p.priority, p.arrival_time)
@@ -106,7 +104,6 @@ class PriorityPScheduler(Scheduler):
         running_metric = (self.running_process.priority, self.running_process.arrival_time)
         ready_metric = (highest_priority_ready.priority, highest_priority_ready.arrival_time)
         
-        # Expulsar si el de la cola tiene mayor prioridad, o igual prioridad pero llegó antes
         if ready_metric < running_metric:
             self.running_process.state = ProcessState.READY
             self.ready_queue.append(self.running_process)

@@ -70,6 +70,4 @@ class ProcessGenerator:
             p = Process(pid=i, arrival_time=arrival_time, bursts=bursts, priority=priority)
             processes.append(p)
             
-        # Opcional: ordenar por tiempo de llegada para que la salida tenga más sentido cronológico
-        processes.sort(key=lambda p: p.arrival_time)
         return processes

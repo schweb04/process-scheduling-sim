@@ -271,12 +271,12 @@ def render_simulation_state(scheduler):
     
     if scheduler.is_complete:
         render_history(scheduler)
-        st.write("") # Espacio en blanco adicional
+        st.write("")
         
     col_ready, col_cpu, col_blocked, col_finished = st.columns(4)
     
     with col_ready:
-        st.markdown("### 🟢 Listos (Ready)")
+        st.markdown("### 🟢 Listos")
         if scheduler.ready_queue:
             for p in scheduler.ready_queue:
                 st.markdown(f"- **P{p.pid}** (espera: {p.wait_time}t)")
@@ -294,10 +294,10 @@ def render_simulation_state(scheduler):
             if scheduler.quantum > 0:
                 st.caption(f"Quantum restante: {scheduler.quantum_remaining}t")
         else:
-            st.caption("Idle (ociosa)")
+            st.caption("Ociosa")
     
     with col_blocked:
-        st.markdown("### 🟡 Bloqueados (E/S)")
+        st.markdown("### 🟡 Bloqueados")
         if scheduler.blocked_queue:
             for p in scheduler.blocked_queue:
                 st.markdown(f"- **P{p.pid}** (E/S rest: {p.remaining_current_burst}t)")
@@ -308,7 +308,7 @@ def render_simulation_state(scheduler):
         st.markdown("### ✅ Terminados")
         if scheduler.finished_queue:
             for p in scheduler.finished_queue:
-                st.markdown(f"- **P{p.pid}** (turnaround: {p.turnaround_time}t)")
+                st.markdown(f"- **P{p.pid}** (Tiempo de ejecución: {p.turnaround_time}t)")
         else:
             st.caption("Ninguno aún")
 
@@ -322,10 +322,10 @@ def render_history(scheduler):
         for snap in scheduler.history:
             history_data.append({
                 "Tick": snap["tick"],
-                "CPU": f"P{snap['running']}" if snap["running"] else "idle",
-                "Ready": [f"P{pid}" for pid in snap["ready"]],
-                "Blocked": [f"P{pid}" for pid in snap["blocked"]],
-                "Finished": [f"P{pid}" for pid in snap["finished"]],
+                "CPU": f"P{snap['running']}" if snap["running"] else "Ociosa",
+                "Listos": [f"P{pid}" for pid in snap["ready"]],
+                "Bloqueados": [f"P{pid}" for pid in snap["blocked"]],
+                "Finalizados": [f"P{pid}" for pid in snap["finished"]],
                 "Llegadas": snap["arrivals"],
             })
         
@@ -348,7 +348,7 @@ def render_statistics(scheduler):
         st.metric("Promedio Espera", f"{stats['avg_wait_time']} ticks")
         st.metric("Promedio Bloqueo", f"{stats['avg_io_time']} ticks")
     with col3:
-        st.metric("Promedio Turnaround", f"{stats['avg_turnaround_time']} ticks")
+        st.metric("Promedio Ejecución", f"{stats['avg_turnaround_time']} ticks")
         st.metric("Arribo Prom./Tick", f"{stats['avg_arrivals_per_tick']}")
     with col4:
         st.metric("Total Completados", f"{stats['total_completed']}")

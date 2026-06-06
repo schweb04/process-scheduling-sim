@@ -45,12 +45,8 @@ class Scheduler(ABC):
         # Estado de la simulación
         self.is_complete: bool = False
         
-        # Historial de eventos por tick (útil para la visualización en Streamlit)
+        # Historial de eventos por tick (para la visualización en Streamlit)
         self.history: List[Dict[str, Any]] = []
-    
-    # ─────────────────────────────────────────────
-    #  MÉTODO ABSTRACTO (a implementar por cada algoritmo)
-    # ─────────────────────────────────────────────
     
     @abstractmethod
     def select_next_process(self) -> Optional[Process]:
@@ -67,10 +63,6 @@ class Scheduler(ABC):
           - Aleatorio: uno al azar.
         """
         pass
-    
-    # ─────────────────────────────────────────────
-    #  MÉTODO CENTRAL: tick()
-    # ─────────────────────────────────────────────
     
     def tick(self):
         """
@@ -90,41 +82,28 @@ class Scheduler(ABC):
         if self.is_complete:
             return
         
-        # 1. Admitir procesos nuevos
         self._admit_new_processes()
         
-        # 2. Procesar cola de bloqueados (E/S)
         self._process_blocked_queue()
         
-        # 3. Procesar CPU
         self._process_running()
         
-        # 3.5. Verificar expulsión (hook para algoritmos expulsivos)
         self._check_preemption()
         
-        # 4. Asignar CPU si está libre
         self._assign_cpu()
         
-        # 5. Acumular espera en la cola de listos
         self._process_ready_queue()
         
-        # 6. Registrar estado del tick
         self._record_tick()
         
-        # 7. Verificar si la simulación terminó
         self._check_completion()
         
-        # 8. Avanzar el reloj
         self.current_tick += 1
     
     def run_all(self):
         """Ejecuta la simulación completa hasta que todos los procesos terminen."""
         while not self.is_complete:
             self.tick()
-    
-    # ─────────────────────────────────────────────
-    #  MÉTODOS AUXILIARES (privados)
-    # ─────────────────────────────────────────────
     
     def _admit_new_processes(self):
         """
@@ -148,7 +127,6 @@ class Scheduler(ABC):
         for process in self.blocked_queue:
             io_finished = process.tick_io()
             if io_finished:
-                # La ráfaga de E/S terminó
                 if process.is_finished():
                     process.finish(self.current_tick)
                     self.finished_queue.append(process)
@@ -172,7 +150,6 @@ class Scheduler(ABC):
         self.cpu_busy_ticks += 1
         
         if cpu_burst_finished:
-            # La ráfaga de CPU terminó
             if self.running_process.is_finished():
                 self.running_process.finish(self.current_tick)
                 self.finished_queue.append(self.running_process)
@@ -186,7 +163,6 @@ class Scheduler(ABC):
             # Verificar expiración del quantum (Round Robin, etc.)
             self.quantum_remaining -= 1
             if self.quantum_remaining <= 0:
-                # Expulsión: devolver a la cola de listos
                 self.running_process.state = ProcessState.READY
                 self.ready_queue.append(self.running_process)
                 self.running_process = None
@@ -240,19 +216,15 @@ class Scheduler(ABC):
         if len(self.finished_queue) == len(self.processes):
             self.is_complete = True
     
-    # ─────────────────────────────────────────────
-    #  ESTADÍSTICAS
-    # ─────────────────────────────────────────────
-    
     def get_statistics(self) -> Dict[str, Any]:
         """
         Calcula y retorna las métricas de rendimiento de la simulación.
         
-        Métricas (según specs.md):
+        Métricas:
           - % de uso del procesador
           - Tiempo promedio de espera
-          - Tiempo promedio de bloqueo (E/S)
-          - Tiempo promedio de ejecución (turnaround)
+          - Tiempo promedio de bloqueo
+          - Tiempo promedio de ejecución
           - Total de procesos completados
           - Arribo de nuevos procesos por paso
           - Tiempo total de la simulación
