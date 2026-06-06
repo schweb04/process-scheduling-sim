@@ -1,9 +1,9 @@
 # --- Python ---
 # Ignorar archivos compilados de Python y cachés
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
 .pytest_cache/
 .cache/
 

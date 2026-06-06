@@ -1,0 +1,7 @@
+[theme]
+base="dark"
+primaryColor="#00E676"  # Verde brillante vibrante
+backgroundColor="#121212" # Oscuro profundo premium
+secondaryBackgroundColor="#1E1E1E" # Para los paneles como la sidebar
+textColor="#E0E0E0"
+font="sans serif"
