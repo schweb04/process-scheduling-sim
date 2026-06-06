@@ -69,3 +69,16 @@ Todos los algoritmos expulsivos se implementan en `src/core/algorithms/preemptiv
     *   SJF ↔ SRTF: Mismo criterio (`remaining_current_burst`), pero SRTF puede interrumpir.
     *   Prioridad NP ↔ Prioridad Expulsiva: Mismo criterio (`priority`), pero la versión expulsiva puede interrumpir.
     *   FCFS ↔ Round Robin: Mismo orden (FIFO), pero Round Robin limita el tiempo con un quantum.
+
+## 11. Integración GUI-Simulación
+*   **Flujo de 3 pasos**: La interfaz guía al usuario a través de: (1) Generar procesos, (2) Configurar algoritmo, (3) Ejecutar simulación. Cada paso tiene su propia sección expandible en el panel lateral.
+    *   *Justificación*: Un flujo secuencial y claro reduce la confusión del usuario y asegura que no se salte pasos (ej. intentar simular sin procesos generados).
+*   **`st.session_state` para persistencia**: Streamlit re-renderiza toda la página en cada interacción. Usamos `st.session_state` para almacenar los procesos generados, el Scheduler activo y su estado actual entre re-renders.
+    *   *Justificación*: Sin `session_state`, los datos se perderían en cada clic de botón. Este mecanismo es el estándar de Streamlit para manejar estado.
+*   **`copy.deepcopy` para reinicio**: Al generar procesos, se guarda una copia profunda de los objetos originales (`procesos_backup`). Al reiniciar la simulación, se crean nuevas instancias del Scheduler a partir de esa copia.
+    *   *Justificación*: Los objetos `Process` son mutados durante la simulación (`tick_cpu()`, `tick_io()`, etc.). Sin copias profundas, reiniciar no restauraría el estado original de los procesos.
+*   **Tres modos de ejecución**:
+    *   *Ejecutar Todo*: Llama a `run_all()` y muestra el resultado final.
+    *   *Siguiente Tick*: Llama a `tick()` una sola vez, permitiendo inspeccionar cada paso.
+    *   *Modo Automático*: Ejecuta ticks en un bucle con `time.sleep()` y actualiza la visualización usando `st.empty()` como contenedor dinámico.
+*   **Catálogo de algoritmos (`ALGORITHMS`)**: Diccionario interno que mapea cada nombre de algoritmo a su clase, si necesita quantum, si es expulsivo y una descripción breve. Permite escalar fácilmente la lista de algoritmos sin modificar la lógica de la interfaz.
