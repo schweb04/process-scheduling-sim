@@ -112,8 +112,8 @@ def init_session_state():
         st.session_state.procesos = []
     if "scheduler" not in st.session_state:
         st.session_state.scheduler = None
-    if "simulation_running" not in st.session_state:
-        st.session_state.simulation_running = False
+    if "auto_mode" not in st.session_state:
+        st.session_state.auto_mode = False
     if "procesos_backup" not in st.session_state:
         st.session_state.procesos_backup = []
 
@@ -157,7 +157,8 @@ def render_sidebar():
         generate_btn = st.button(
             "🎲 Generar Procesos",
             type="primary",
-            use_container_width=True
+            use_container_width=True,
+            disabled=st.session_state.get("auto_mode", False)
         )
     
     # ── Sección 2: Configuración del Algoritmo ──
@@ -195,12 +196,16 @@ def render_sidebar():
         
         col1, col2 = st.columns(2)
         with col1:
-            step_btn = st.button("⏭ Siguiente Tick", use_container_width=True)
+            step_btn = st.button("⏭ Siguiente Tick", use_container_width=True, disabled=st.session_state.get("auto_mode", False))
         with col2:
-            run_all_btn = st.button("⏩ Ejecutar Todo", use_container_width=True)
+            run_all_btn = st.button("⏩ Ejecutar Todo", use_container_width=True, disabled=st.session_state.get("auto_mode", False))
         
-        auto_btn = st.button("▶️ Modo Automático", use_container_width=True)
-        reset_btn = st.button("🔄 Reiniciar Simulación", use_container_width=True)
+        if st.session_state.get("auto_mode", False):
+            auto_btn = st.button("⏸ Pausar Automático", use_container_width=True)
+        else:
+            auto_btn = st.button("▶️ Modo Automático", use_container_width=True)
+            
+        reset_btn = st.button("🔄 Reiniciar Simulación", use_container_width=True, disabled=st.session_state.get("auto_mode", False))
     
     return {
         "num_processes": num_processes,
@@ -342,16 +347,16 @@ def render_statistics(scheduler):
     
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric("% Uso CPU", f"{stats['cpu_usage_percent']}%")
-        st.metric("Tiempo Total", f"{stats['total_ticks']} ticks")
+        st.metric("% Uso CPU", f"{stats['cpu_usage_percent']}%", help="Porcentaje del tiempo total en el que la CPU estuvo ejecutando algún proceso.")
+        st.metric("Tiempo Total", f"{stats['total_ticks']} ticks", help="Cantidad de ticks transcurridos desde el inicio hasta terminar el último proceso.")
     with col2:
-        st.metric("Promedio Espera", f"{stats['avg_wait_time']} ticks")
-        st.metric("Promedio Bloqueo", f"{stats['avg_io_time']} ticks")
+        st.metric("Promedio Espera", f"{stats['avg_wait_time']} ticks", help="Tiempo promedio que los procesos pasaron en la cola de Listos esperando la CPU.")
+        st.metric("Promedio Bloqueo", f"{stats['avg_io_time']} ticks", help="Tiempo promedio que los procesos pasaron bloqueados por Entrada/Salida.")
     with col3:
-        st.metric("Promedio Ejecución", f"{stats['avg_turnaround_time']} ticks")
-        st.metric("Arribo Prom./Tick", f"{stats['avg_arrivals_per_tick']}")
+        st.metric("Promedio Ejecución", f"{stats['avg_turnaround_time']} ticks", help="Tiempo promedio desde que el proceso llega al sistema hasta que finaliza.")
+        st.metric("Arribo Prom./Tick", f"{stats['avg_arrivals_per_tick']}", help="Promedio de procesos que llegaron al sistema por cada tick de tiempo.")
     with col4:
-        st.metric("Total Completados", f"{stats['total_completed']}")
+        st.metric("Total Completados", f"{stats['total_completed']}", help="Número total de procesos que finalizaron exitosamente.")
 
 # ─────────────────────────────────────────────
 #  Función principal
@@ -382,6 +387,7 @@ def main():
     # ── Reiniciar simulación ──
     if config["reset_btn"] and st.session_state.procesos_backup:
         st.session_state.scheduler = None
+        st.session_state.auto_mode = False
     
     # ── Mostrar tabla de procesos ──
     render_process_table()
@@ -400,39 +406,37 @@ def main():
     scheduler = st.session_state.scheduler
     
     # ── Controles de simulación ──
+    if config["auto_btn"]:
+        st.session_state.auto_mode = not st.session_state.auto_mode
+        st.rerun()
+
     if config["step_btn"] and not scheduler.is_complete:
         scheduler.tick()
     
     if config["run_all_btn"] and not scheduler.is_complete:
         scheduler.run_all()
     
-    if config["auto_btn"] and not scheduler.is_complete:
-        # Modo automático: ejecutar tick a tick con delay visual
-        state_container = st.empty()
-        progress_bar = st.progress(0)
-        total = len(scheduler.processes)
-        
-        while not scheduler.is_complete:
-            scheduler.tick()
-            
-            with state_container.container():
-                render_simulation_state(scheduler)
-            
-            completed = len(scheduler.finished_queue)
-            progress_bar.progress(completed / total if total > 0 else 1.0)
-            time.sleep(config["speed"] / 1000.0)
-        
-        state_container.empty()
-        progress_bar.empty()
-    
     # ── Mostrar estado actual ──
+    if st.session_state.get("auto_mode", False) and not scheduler.is_complete:
+        total = len(scheduler.processes)
+        completed = len(scheduler.finished_queue)
+        st.progress(completed / total if total > 0 else 1.0)
+
     render_simulation_state(scheduler)
     
     # ── Estadísticas finales ──
     render_statistics(scheduler)
     
     if scheduler.is_complete:
+        if st.session_state.get("auto_mode", False):
+            st.session_state.auto_mode = False
+            st.rerun()
         st.success("✅ Simulación completada.")
+    else:
+        if st.session_state.get("auto_mode", False):
+            time.sleep(config["speed"] / 1000.0)
+            scheduler.tick()
+            st.rerun()
 
 if __name__ == "__main__":
     main()
